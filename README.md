@@ -95,3 +95,4 @@ npm test               # offline tests, no network and no real keys
 - If the server restarts in the middle of someone's JOIN chat, that person starts the questions again. Saved details stay in the sheet.
 - Google allows about 60 writes per minute per user, far more than a gym needs.
 - To use Supabase instead of Google Sheets, leave `GOOGLE_SHEET_ID` empty and run `supabase/schema.sql`.
+# gold-fitness-automation
