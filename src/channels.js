@@ -48,8 +48,17 @@ function igText(recipientId, body) {
   });
 }
 
+// OWNER_PHONE may hold one number or several separated by commas. 10-digit numbers get 91 added.
+function ownerNumbers(value = process.env.OWNER_PHONE) {
+  return String(value || '')
+    .split(',')
+    .map((s) => s.replace(/\D/g, ''))
+    .filter(Boolean)
+    .map((n) => (n.length === 10 ? `91${n}` : n));
+}
+
 async function sendText(channel, to, body) {
   return channel === 'instagram' ? igText(to, body) : waText(to, body);
 }
 
-module.exports = { sendText, waText, waTemplate, igText };
+module.exports = { sendText, waText, waTemplate, igText, ownerNumbers };

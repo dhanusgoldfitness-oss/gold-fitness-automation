@@ -80,12 +80,13 @@ function createApp(overrides = {}) {
   const notifyOwner =
     overrides.notifyOwner ||
     (async (text) => {
-      if (!process.env.OWNER_PHONE) return;
-      try {
-        await channels.waText(process.env.OWNER_PHONE, text);
-      } catch (e) {
-        // Free-form text only reaches the owner if they messaged the number in the last 24h.
-        console.error('Owner alert failed:', e.message);
+      for (const number of channels.ownerNumbers()) {
+        try {
+          await channels.waText(number, text);
+        } catch (e) {
+          // Free-form text only reaches an owner who messaged the business number in the last 24h.
+          console.error(`Owner alert to ${number} failed:`, e.message);
+        }
       }
     });
 
