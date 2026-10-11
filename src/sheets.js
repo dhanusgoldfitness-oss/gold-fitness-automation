@@ -24,15 +24,34 @@ const sheetId = () => process.env.GOOGLE_SHEET_ID;
 let creds = null;
 let token = { value: null, exp: 0 };
 
+// Accepts the key file contents as-is, the base64 of it, or either one wrapped in quotes
+// (a common paste mistake). Errors never include the value, so secrets stay out of logs.
+function parseCreds(raw) {
+  const text = String(raw || '').trim();
+  if (!text) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not set');
+  const unquoted = text.replace(/^(['"`])([\s\S]*)\1$/, '$2').trim();
+  const candidates = [text, unquoted, Buffer.from(unquoted, 'base64').toString('utf8')];
+  for (const candidate of candidates) {
+    let v = candidate;
+    for (let i = 0; i < 2 && typeof v === 'string'; i++) {
+      try {
+        v = JSON.parse(v);
+      } catch (_) {
+        break;
+      }
+    }
+    if (v && typeof v === 'object' && v.client_email && v.private_key) {
+      return { ...v, private_key: String(v.private_key).replace(/\\n/g, '\n') };
+    }
+  }
+  throw new Error(
+    'GOOGLE_SERVICE_ACCOUNT_JSON could not be read. Paste the whole key file contents (it starts with a curly bracket) or its base64 text, with no quotes around it.'
+  );
+}
+
 function getCreds() {
-  if (creds) return creds;
-  const raw = (process.env.GOOGLE_SERVICE_ACCOUNT_JSON || '').trim();
-  if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not set');
-  const text = raw.startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8');
-  const c = JSON.parse(text);
-  if (!c.client_email || !c.private_key) throw new Error('Service account JSON needs client_email and private_key');
-  creds = c;
-  return c;
+  if (!creds) creds = parseCreds(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  return creds;
 }
 
 async function getToken() {
@@ -332,4 +351,4 @@ async function audience(kind) {
   return out;
 }
 
-module.exports = { init, getLead, createLead, updateLead, logMessage, membersExpiringOn, markReminded, audience, _normDate: normDate, _normPhone: normPhone };
+module.exports = { _parseCreds: parseCreds, init, getLead, createLead, updateLead, logMessage, membersExpiringOn, markReminded, audience, _normDate: normDate, _normPhone: normPhone };

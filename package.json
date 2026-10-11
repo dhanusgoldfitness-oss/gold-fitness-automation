@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --env-file=.env src/server.js",
-    "test": "node test/sheets.test.js && node test/smoke.test.js"
+    "test": "node test/creds.test.js && node test/sheets.test.js && node test/smoke.test.js"
   },
   "engines": {
     "node": ">=20"
