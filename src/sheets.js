@@ -10,6 +10,7 @@
 // mid-chat, that person simply starts over. Saved lead details stay in the sheet.
 
 const crypto = require('crypto');
+const config = require('./config');
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets';
 const LEAD_COLS = ['date', 'name', 'phone', 'goal', 'source', 'status', 'whatsapp_consent', 'notes'];
@@ -266,7 +267,7 @@ async function updateLead(id, patch) {
   if ('goal' in patch) put('goal', patch.goal === null || patch.goal === undefined ? '' : patch.goal);
   if ('preferred_time' in patch) put('notes', `Preferred time: ${patch.preferred_time}`);
   if ('opt_in' in patch) put('whatsapp_consent', patch.opt_in ? 'yes' : 'no');
-  if (patch.booked) put('status', 'trial_requested');
+  if (patch.booked) put('status', config.trialOffer ? 'trial_requested' : 'join_requested');
   if (patch.needs_human) put('status', 'needs_human');
 
   if (data.length) {

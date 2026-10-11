@@ -15,6 +15,9 @@ process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({
   token_uri: 'https://oauth2.googleapis.com/token',
 });
 
+const config = require('../src/config');
+const joinStatus = config.trialOffer ? 'trial_requested' : 'join_requested';
+
 const colIndex = (letters) => letters.split('').reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1;
 
 function makeFakeGoogle() {
@@ -145,7 +148,7 @@ const serial = (iso) => Date.UTC(...iso.split('-').map((x, i) => (i === 1 ? Numb
   const done = await db.updateLead(lead.id, { opt_in: true, state: 'idle', booked: true });
   assert.strictEqual(row[1], 'Ravi Kumar');
   assert.strictEqual(row[3], 'muscle gain');
-  assert.strictEqual(row[5], 'trial_requested');
+  assert.strictEqual(row[5], joinStatus);
   assert.strictEqual(row[6], 'yes');
   assert.strictEqual(row[7], 'Preferred time: Monday 6pm');
   assert.strictEqual(row[0], 'edited by staff');
@@ -230,7 +233,7 @@ const serial = (iso) => Date.UTC(...iso.split('-').map((x, i) => (i === 1 ? Numb
   const out = fresh.store.tabs.Leads[1];
   assert.strictEqual(out[1], 'Sunil Rao');
   assert.strictEqual(out[3], 'weight loss');
-  assert.strictEqual(out[5], 'trial_requested');
+  assert.strictEqual(out[5], joinStatus);
   assert.strictEqual(out[6], 'yes');
   assert.strictEqual(out[7], 'Preferred time: Tuesday 7am');
   assert.strictEqual(owner.length, 1);

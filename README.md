@@ -15,7 +15,7 @@ WhatsApp and Instagram automation for Gold Fitness. Leads and members live in a 
 The service reads and writes these tabs:
 
 **Leads** (your existing columns): `date, name, phone, goal, source, status, whatsapp_consent, notes`
-- A new contact gets a row with `status = new`. Finishing JOIN sets `trial_requested`; asking for a person sets `needs_human`.
+- A new contact gets a row with `status = new`. Finishing JOIN sets `join_requested` (`trial_requested` if you set a `trialOffer`); asking for a person sets `needs_human`.
 - `whatsapp_consent` becomes `yes` or `no` from the customer's answer, and `no` again if they send STOP.
 - The preferred trial time is written to `notes`.
 - An `external_id` column is added automatically on the right. It is how the service recognises the same person (a WhatsApp number or an Instagram ID). Don't delete it.
@@ -31,7 +31,7 @@ The service reads and writes these tabs:
 
 ## Before you go live
 
-1. **Edit `src/config.js`.** Plan prices are `CHANGE ME` placeholders. Check hours and address too.
+1. **Check `src/config.js`.** It holds your plan prices, hours and address; edit it whenever they change. To offer a free trial, add a line like `trialOffer: 'Book a free trial session.'` and the replies will mention it.
 2. **Create two message templates** in WhatsApp Manager and wait for approval:
    - `membership_renewal` (utility): body with `{{1}}` = name, `{{2}}` = expiry date
    - `welcome_message` (optional): body with `{{1}}` = name
