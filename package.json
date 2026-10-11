@@ -1,0 +1,18 @@
+{
+  "name": "gold-fitness-automation",
+  "version": "1.0.0",
+  "description": "WhatsApp + Instagram auto-reply, lead capture, reminders and broadcasts for Gold Fitness",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --env-file=.env src/server.js",
+    "test": "node test/sheets.test.js && node test/smoke.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3"
+  }
+}
