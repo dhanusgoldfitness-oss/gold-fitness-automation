@@ -24,6 +24,29 @@ function waText(to, body) {
   });
 }
 
+// WhatsApp interactive list ("View Options") and reply buttons. Allowed inside the 24h window only, like text.
+function waList(to, { body, button, rows }) {
+  return post(`${GRAPH}/${process.env.WA_PHONE_NUMBER_ID}/messages`, process.env.WA_ACCESS_TOKEN, {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: body },
+      action: { button, sections: [{ title: 'Options', rows: rows.map((r) => ({ id: r.id, title: r.title, ...(r.description ? { description: r.description } : {}) })) }] },
+    },
+  });
+}
+
+function waButtons(to, { body, buttons }) {
+  return post(`${GRAPH}/${process.env.WA_PHONE_NUMBER_ID}/messages`, process.env.WA_ACCESS_TOKEN, {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: { type: 'button', body: { text: body }, action: { buttons: buttons.map((b) => ({ type: 'reply', reply: { id: b.id, title: b.title } })) } },
+  });
+}
+
 // WhatsApp: approved template, needed for reminders and broadcasts outside the 24h window.
 function waTemplate(to, name, language, params = []) {
   return post(`${GRAPH}/${process.env.WA_PHONE_NUMBER_ID}/messages`, process.env.WA_ACCESS_TOKEN, {
@@ -50,15 +73,20 @@ function igText(recipientId, body) {
 
 // OWNER_PHONE may hold one number or several separated by commas. 10-digit numbers get 91 added.
 function ownerNumbers(value = process.env.OWNER_PHONE) {
-  return String(value || '')
-    .split(',')
-    .map((s) => s.replace(/\D/g, ''))
-    .filter(Boolean)
-    .map((n) => (n.length === 10 ? `91${n}` : n));
+  const out = [];
+  for (const token of String(value || '').split(/[,;\n]+/)) {
+    const digits = token.replace(/\D/g, '');
+    if (!digits) continue;
+    // Two full numbers pasted together without a separator (e.g. 919740018911919742142166) are split into 12-digit chunks.
+    if (digits.length > 12 && digits.length % 12 === 0 && digits.startsWith('91')) {
+      for (let i = 0; i < digits.length; i += 12) out.push(digits.slice(i, i + 12));
+    } else out.push(digits.length === 10 ? `91${digits}` : digits);
+  }
+  return out;
 }
 
 async function sendText(channel, to, body) {
   return channel === 'instagram' ? igText(to, body) : waText(to, body);
 }
 
-module.exports = { sendText, waText, waTemplate, igText, ownerNumbers };
+module.exports = { sendText, waText, waList, waButtons, waTemplate, igText, ownerNumbers };

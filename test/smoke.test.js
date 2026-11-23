@@ -70,6 +70,8 @@ function waPayload(from, id, text) {
   const app = createApp({
     db,
     send: async (channel, to, body) => sent.push({ channel, to, body }),
+    sendList: async (to, list) => sent.push({ channel: 'whatsapp', to, body: `${list.body}`, list }),
+    sendButtons: async (to, b) => sent.push({ channel: 'whatsapp', to, body: b.body }),
     waTemplate: async (to, name, lang, params) => templates.push({ to, name, lang, params }),
     notifyOwner: async (t) => owner.push(t),
     noDelay: true,
@@ -101,7 +103,7 @@ function waPayload(from, id, text) {
   r = await hook(waPayload('919000000001', 'm1', 'hello'));
   assert.strictEqual(r.status, 200);
   await waitFor(() => sent.length === 1);
-  assert.match(sent[0].body, /Welcome to Gold Fitness/);
+  assert.match(sent[0].body, /Welcome to GOLD FITNESS KENGERI/);
   await hook(waPayload('919000000001', 'm2', 'what is the price?'));
   await waitFor(() => sent.length === 2);
   assert.match(sent[1].body, /membership plans/);
@@ -138,7 +140,7 @@ function waPayload(from, id, text) {
   ] }] });
   await waitFor(() => sent.length === before + 1);
   assert.strictEqual(sent[sent.length - 1].channel, 'instagram');
-  assert.match(sent[sent.length - 1].body, /open/);
+  assert.match(sent[sent.length - 1].body, /Gym Hours/);
   await sleep(50);
   assert.strictEqual(sent.length, before + 1);
 

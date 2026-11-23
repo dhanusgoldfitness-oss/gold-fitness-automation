@@ -1,0 +1,12 @@
+{
+  "_note": "Owner-editable overrides on top of the built-in defaults in src/settings.js (plans, prices, hours, address, website, Instagram, owner links). null = not configured; the bot then tells the customer to ask the front desk and logs the missing setting for staff.",
+  "mapsLink": null,
+  "facebook": null,
+  "youtube": null,
+  "frontDeskNumber": null,
+  "handoverHours": 12,
+  "tax": { "ratePercent": 5, "confirmed": false, "showBreakdown": false },
+  "plans": {
+    "three_plus_nine": { "sessionFrequency": null, "confirmedExtras": [] }
+  }
+}

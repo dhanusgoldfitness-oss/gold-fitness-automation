@@ -31,6 +31,17 @@ function istDate(offsetDays = 0) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Taps on the menu list / PT buttons arrive as ids; hand them to the bot as the same digits a customer would type.
+const TAP_DIGITS = { pt_silver: '1', pt_gold: '2', pt_3p9: '3' };
+function listOrButtonReply(i) {
+  if (!i) return '';
+  const r = i.list_reply || i.button_reply;
+  if (!r) return '';
+  const menu = /^menu_(\d)$/.exec(r.id || '');
+  if (menu) return menu[1];
+  return TAP_DIGITS[r.id] || r.title || '';
+}
+
 function extractMessages(body) {
   const out = [];
   if (body.object === 'whatsapp_business_account') {
@@ -48,7 +59,7 @@ function extractMessages(body) {
             text:
               (m.text && m.text.body) ||
               (m.button && m.button.text) ||
-              (m.interactive && m.interactive.button_reply && m.interactive.button_reply.title) ||
+              listOrButtonReply(m.interactive) ||
               '',
           });
         }
@@ -90,8 +101,21 @@ function createApp(overrides = {}) {
       }
     });
 
-  const deps = { db, send, notifyOwner };
+  const sendList = overrides.sendList || channels.waList;
+  const sendButtons = overrides.sendButtons || channels.waButtons;
+  const deps = { db, send, sendList, sendButtons, notifyOwner };
+  // Menu bot (ESM) is loaded lazily. null = disabled, and the keyword bot below keeps answering WhatsApp.
+  const enquiryReady =
+    overrides.enquiryEngine !== undefined
+      ? Promise.resolve(overrides.enquiryEngine)
+      : import('./enquiry-bot/factory.js')
+          .then((m) => m.createEnquiryEngine({ legacyDb: db, notifyOwner }))
+          .catch((e) => {
+            console.error('Enquiry bot failed to load; keyword bot stays active:', e.message);
+            return null;
+          });
   const app = express();
+  app.enquiryReady = enquiryReady;
 
   app.use(
     express.json({
@@ -113,10 +137,29 @@ function createApp(overrides = {}) {
     return res.sendStatus(403);
   });
 
-  app.post('/webhook', (req, res) => {
+  app.post('/webhook', async (req, res) => {
     if (!overrides.skipSignature && !validSignature(req.rawBody, req.get('x-hub-signature-256'))) {
       return res.sendStatus(401);
     }
+
+    // WhatsApp goes to the menu bot when it is enabled: it saves the event BEFORE acknowledging, drops duplicates by
+    // message id, ignores delivery-status events, and is the only sender (the keyword bot is skipped for WhatsApp).
+    if ((req.body || {}).object === 'whatsapp_business_account') {
+      const engine = await enquiryReady;
+      if (engine) {
+        let pending;
+        try {
+          pending = await engine.ingest(req.body);
+        } catch (e) {
+          console.error('Inbound save failed; asking Meta to retry:', e.message);
+          return res.sendStatus(500);
+        }
+        res.sendStatus(200);
+        for (const wamid of pending) setImmediate(() => engine.process(wamid).catch((e) => console.error('Enquiry bot error:', e.message)));
+        return;
+      }
+    }
+
     res.sendStatus(200); // answer fast; Meta retries slow responses
 
     const messages = extractMessages(req.body || {});
@@ -207,6 +250,7 @@ if (require.main === module) {
   Promise.resolve(realDb.init ? realDb.init() : null)
     .then(() => {
       app.listen(port, () => console.log(`Gold Fitness automation listening on ${port}`));
+      app.enquiryReady.then((e) => e && e.startBackground()).catch(() => {});
 
       // Daily renewal reminders at 9:00 AM India time.
       cron.schedule('0 9 * * *', () => {
