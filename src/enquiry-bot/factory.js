@@ -15,10 +15,14 @@ import { createSettingsLoader } from "./settings.js";
 import { Timings } from "./timing.js";
 import { OwnerPack } from "./ownerpack.js";
 import { MENU_TITLES } from "./i18n.js";
+import { PeopleService } from "./people.js";
+import { SupabasePeopleStore } from "./people-store.js";
+import { Campaigns } from "./campaigns.js";
+import { SchedAdmin } from "./admin.js";
 
 const readJson = (rel) => JSON.parse(fs.readFileSync(new URL(rel, import.meta.url), "utf8"));
 
-export function createEnquiryEngine({ env = process.env, legacyDb, notifyOwner = async () => {}, log = (...a) => console.error(...a), fetchImpl = globalThis.fetch, store: injectedStore } = {}) {
+export function createEnquiryEngine({ env = process.env, legacyDb, notifyOwner = async () => {}, log = (...a) => console.error(...a), fetchImpl = globalThis.fetch, store: injectedStore, peopleStore: injectedPeopleStore = null, templateStatus = null } = {}) {
   if (String(env.ENQUIRY_BOT || "").toLowerCase() !== "on") return null;
   const url = env.BOT_SUPABASE_URL || env.SUPABASE_URL;
   const key = env.BOT_SUPABASE_SERVICE_KEY || env.SUPABASE_SERVICE_KEY;
@@ -58,7 +62,30 @@ export function createEnquiryEngine({ env = process.env, legacyDb, notifyOwner =
       await notifyOwner(text).catch(() => {});
     },
   };
-  const bot = new Bot({ settings, store, notifier });
+  // Enquiry capture (writes leads in the ERP) and scheduled messages are separate switches, both OFF by default.
+  //   ENQUIRY_CAPTURE=on   needs supabase/003_scheduled_messages.sql applied
+  //   ENQUIRY_SCHEDULER=on needs ENQUIRY_CAPTURE=on and WA_BUSINESS_ACCOUNT_ID (to read live template approval)
+  // Each campaign is additionally OFF until the owner previews and enables it (SCHED ENABLE ...).
+  const on = (v) => String(v || "").toLowerCase() === "on";
+  let people = null;
+  let campaigns = null;
+  let sched = null;
+  if (on(env.ENQUIRY_CAPTURE) && (injectedPeopleStore || !injectedStore)) {
+    const peopleStore = injectedPeopleStore || new SupabasePeopleStore({ rest: (...a) => store.rest(...a), gymId: env.GYM_ID || null });
+    people = new PeopleService({ store: peopleStore, log, gymId: env.GYM_ID || null });
+    if (on(env.ENQUIRY_SCHEDULER)) {
+      const waba = env.WA_BUSINESS_ACCOUNT_ID;
+      campaigns = new Campaigns({
+        store: peopleStore,
+        client,
+        log,
+        fixedEvents: readJson("./config/calendar-fixed.json").fixed,
+        rates: { MARKETING: env.WA_RATE_MARKETING ? Number(env.WA_RATE_MARKETING) : null, UTILITY: env.WA_RATE_UTILITY ? Number(env.WA_RATE_UTILITY) : null },
+        templateStatus: templateStatus || (async (name, lang) => (waba ? client.templateStatus(waba, name, lang) : { status: "UNKNOWN" })),
+      });
+    }
+  }
+  const bot = new Bot({ settings, store, notifier, people });
   const photoManifest = new ManifestCache({
     cloudName: env.CLOUDINARY_CLOUD_NAME || approved.cloud_name,
     apiKey: env.CLOUDINARY_API_KEY,
@@ -75,12 +102,18 @@ export function createEnquiryEngine({ env = process.env, legacyDb, notifyOwner =
   const outsideWindowTemplate = String(env.ENQUIRY_PACK_TEMPLATE_ENABLED || "").toLowerCase() === "on" ? { name: env.ENQUIRY_PACK_TEMPLATE || "gfk_requested_gym_details", language: env.ENQUIRY_PACK_TEMPLATE_LANG || "en", params: [] } : null;
   const settingsWithMenu = { get: async () => ({ ...(await settings.get()), menuTitles: MENU_TITLES.en }) };
   const ownerPack = new OwnerPack({ store, client, settings: settingsWithMenu, authorized, botNumber, mainEnquiryNumber, template: outsideWindowTemplate, log });
-  const engine = new Engine({ store, bot, client, settings, timings: new Timings(), photoManifest, repliesAfterStop: true, ownerPack, botNumber, botPhoneNumberId: env.WA_PHONE_NUMBER_ID, log });
+  if (campaigns) sched = new SchedAdmin({ campaigns, store: campaigns.store, authorized, seedMessages: readJson("./config/motivation-seed.json").messages, log });
+  const engine = new Engine({ store, bot, client, settings, timings: new Timings(), photoManifest, repliesAfterStop: true, ownerPack, people, campaigns, sched, botNumber, botPhoneNumberId: env.WA_PHONE_NUMBER_ID, log });
   engine.startBackground = () => {
     engine.recoverPending().catch(() => {});
     engine.resumeOpenJobs().catch(() => {});
     setInterval(() => engine.resumeOpenJobs().catch(() => {}), 60_000).unref();
     setInterval(() => engine.recoverPending().catch(() => {}), 30_000).unref();
+    if (campaigns) {
+      const tick = () => campaigns.tick().then((r) => r?.accepted && log(`scheduled messages: ${r.accepted} accepted by Meta`)).catch((e) => log("scheduled tick failed", e.message));
+      tick();
+      setInterval(tick, 60_000).unref();
+    }
   };
   return engine;
 }

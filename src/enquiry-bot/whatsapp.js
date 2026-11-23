@@ -99,4 +99,15 @@ export class WhatsAppClient {
       },
     });
   }
+
+  /** Live approval status of one template/language from Meta (needs WA_BUSINESS_ACCOUNT_ID and a token allowed to read templates). */
+  async templateStatus(wabaId, name, language) {
+    const url = `https://graph.facebook.com/${this.apiVersion}/${wabaId}/message_templates?name=${encodeURIComponent(name)}&fields=name,status,category,language&limit=20`;
+    const res = await this.fetchImpl(url, { headers: { Authorization: `Bearer ${this.token}` } });
+    let body = {};
+    try { body = await res.json(); } catch { /* ignore */ }
+    if (!res.ok) throw new MetaError("rejected", this.redact(body?.error?.message || `HTTP ${res.status}`), { code: body?.error?.code });
+    const hit = (body.data || []).find((t) => t.name === name && t.language === language);
+    return hit ? { status: hit.status, category: hit.category } : { status: "MISSING" };
+  }
 }

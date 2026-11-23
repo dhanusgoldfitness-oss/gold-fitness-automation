@@ -4,6 +4,8 @@
 import { t, mainMenuText, MENU_TITLES } from "./i18n.js";
 import { renderPlan, PLAN_GUIDE, rupees } from "./plans.js";
 import { locationReply } from "./location.js";
+import { normalizeIndianMobile } from "./phone.js";
+import { parseBirthday } from "./ist.js";
 
 const GREETINGS = new Set(["hi", "hii", "hiii", "hello", "hey", "hlo", "menu", "start", "namaste", "namaskara", "ನಮಸ್ಕಾರ", "good morning", "good afternoon", "good evening", "0"]);
 
@@ -93,8 +95,8 @@ function parseInbound(msg) {
 
 
 export class Bot {
-  constructor({ settings, store, members = { find: async () => null }, notifier = { notifyFrontDesk: async () => {} }, now = Date.now }) {
-    Object.assign(this, { settings, store, members, notifier, now });
+  constructor({ settings, store, members = { find: async () => null }, notifier = { notifyFrontDesk: async () => {} }, now = Date.now, people = null }) {
+    Object.assign(this, { settings, store, members, notifier, now, people });
   }
 
   newSession() {
@@ -112,6 +114,15 @@ export class Bot {
     let out;
 
     if (!id && lower != null && GREETINGS.has(lower)) id = "menu_main";
+
+    if (!id && lower != null && !session.step && this.people) {
+      const pref = await this.prefCommand({ chat, lower, session });
+      if (pref) {
+        session.updatedAt = this.now();
+        await this.store.saveSession(chat, session);
+        return pref;
+      }
+    }
 
     if (!id && lower != null && session.step) {
       out = await this.step({ chat, name, settings, session, input: raw });
@@ -159,6 +170,7 @@ export class Bot {
 
       case "menu_1": {
         session.menu = "plans";
+        session.interest = { interest: "Membership plans" };
         const r = renderPlan("general", l, settings.plans?.general, settings.tax);
         for (const k of r.missing) await this.missing(k, "membership price");
         return [text(`${t(l, "plansHeader")}\n\n${r.text}`), plansButtons(l)];
@@ -191,6 +203,7 @@ export class Bot {
         const key = PT_KEYS[id];
         session.menu = "after_pt";
         session.lastPackage = key;
+        session.interest = { interest: "Personal Training", packageName: { silver: "Silver PT", gold: "Gold PT", three_plus_nine: "3+9 Package" }[key] };
         const r = renderPlan(key, l, settings.plans?.[key], settings.tax);
         for (const k of r.missing) await this.missing(k, "personal training price");
         return [text(r.text), { type: "photo_job", packageKey: key }];
@@ -241,6 +254,11 @@ export class Bot {
         return [text(lines.join("\n"))];
       }
 
+      case "pref_mot_daily":
+      case "pref_mot_weekly":
+      case "pref_mot_off":
+        return this.setMotivation({ chat, id, session });
+
       case "menu_9":
         session.lang = l === "en" ? "kn" : "en";
         session.menu = "main";
@@ -266,8 +284,9 @@ export class Bot {
       session.step = null;
       session.menu = "main";
       const done = text(t(l, "visitDone", { name: visit.name, slot }));
+      session.shareName = visit.name; // the name the customer chose to share; used for their enquiry record
       session.data = {};
-      return [done];
+      return this.people ? [done, text(t(l, "birthdayAsk"))] : [done];
     }
     if (session.step === "renew_id") {
       const member = await this.members.find({ phone: chat, memberCode: input.trim() });
@@ -291,6 +310,52 @@ export class Bot {
     }
     session.step = null;
     return [text(t(l, "invalid")), this.currentMenu(session)];
+  }
+
+  // ---- messaging preferences (motivation, birthday, festival). Typed keywords work at any time; STOP wins over all.
+  async prefCommand({ chat, lower, session }) {
+    const m = /^(updates|preferences|motivation|birthday|festival)(?:\s+(.+))?$/.exec(lower);
+    if (!m) return null;
+    const l = session.lang;
+    const phone = normalizeIndianMobile(chat);
+    if (!phone) return null;
+    if (await this.people.stopped(phone)) return [text(t(l, "stoppedNote"))];
+    await this.people.captureEnquiry({ phone, language: l, source: "WhatsApp bot" }); // preferences need a record to hang on
+    const [, cmd, arg = ""] = m;
+    if (cmd === "birthday") {
+      if (arg === "off") { await this.people.clearBirthday(phone); return [text(t(l, "birthdayOff"))]; }
+      const b = parseBirthday(arg);
+      if (!b) return [text(t(l, "birthdayInvalid"))];
+      await this.people.setBirthday(phone, b);
+      return [text(t(l, "birthdaySaved", { date: `${b.day}/${b.month}` }))];
+    }
+    if (cmd === "festival") {
+      if (arg !== "on" && arg !== "off") return [text(t(l, "prefsMore"))];
+      await this.people.setFestival(phone, arg === "on");
+      return [text(t(l, arg === "on" ? "festivalOn" : "festivalOff"))];
+    }
+    if (cmd === "motivation" && ["daily", "weekly", "off"].includes(arg)) {
+      await this.people.setMotivation(phone, arg);
+      return [text(t(l, "prefsSaved"))];
+    }
+    const s = await this.people.summary(phone);
+    const v = (b) => t(l, b ? "valOn" : "valOff");
+    const mot = s.motivation === "off" ? t(l, "valOff") : t(l, s.motivation === "daily" ? "valDaily" : "valWeekly");
+    return [
+      text(t(l, "prefsHeader", { motivation: mot, birthday: s.birthday ? s.birthdayDate : t(l, "valOff"), festival: v(s.festival) })),
+      { type: "buttons", body: t(l, "prefsMotivationAsk"), buttons: [{ id: "pref_mot_daily", title: t(l, "btnDaily") }, { id: "pref_mot_weekly", title: t(l, "btnWeekly") }, { id: "pref_mot_off", title: t(l, "btnOff") }] },
+      text(t(l, "prefsMore")),
+    ];
+  }
+
+  async setMotivation({ chat, id, session }) {
+    const l = session.lang;
+    const phone = normalizeIndianMobile(chat);
+    if (!this.people || !phone) return [text(t(l, "invalid")), this.currentMenu(session)];
+    if (await this.people.stopped(phone)) return [text(t(l, "stoppedNote"))];
+    await this.people.captureEnquiry({ phone, language: l, source: "WhatsApp bot" });
+    await this.people.setMotivation(phone, id.replace("pref_mot_", ""));
+    return [text(t(l, "prefsSaved"))];
   }
 
   async handoff({ chat, name, settings, session, reason, details }) {

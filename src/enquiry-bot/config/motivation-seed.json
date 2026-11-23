@@ -1,0 +1,23 @@
+{
+  "_note": "DRAFT messages. All start unapproved (approved=false). The owner approves each one (SCHED MSG APPROVE <id>). Kannada drafts need a native-speaker review before approval. No medical claims, no guarantees, no body-shaming.",
+  "messages": [
+    { "id": "mot-en-w1", "lang": "en", "category": "workout", "text": "Show up and warm up properly today. A good session starts with the first five minutes." },
+    { "id": "mot-en-w2", "lang": "en", "category": "workout", "text": "Pick one lift today and do it with perfect form. Quality reps beat rushed reps." },
+    { "id": "mot-en-w3", "lang": "en", "category": "workout", "text": "Challenge yourself with one extra set today, only if your form stays clean." },
+    { "id": "mot-en-c1", "lang": "en", "category": "consistency", "text": "Small steps add up. Keep your routine going today, even if it is a short session." },
+    { "id": "mot-en-c2", "lang": "en", "category": "consistency", "text": "You do not need a perfect day. You just need to turn up. See you at the gym." },
+    { "id": "mot-en-c3", "lang": "en", "category": "consistency", "text": "Habits are built on ordinary days. Make today count." },
+    { "id": "mot-en-r1", "lang": "en", "category": "recovery", "text": "Recovery is part of training. Drink enough water and get a good night's sleep today." },
+    { "id": "mot-en-r2", "lang": "en", "category": "recovery", "text": "Stretch for a few minutes after your workout. Your body will thank you tomorrow." },
+    { "id": "mot-en-r3", "lang": "en", "category": "recovery", "text": "Feeling tired? A light walk and good food can be a smart rest-day plan." },
+    { "id": "mot-kn-w1", "lang": "kn", "category": "workout", "text": "ಇಂದು ಸರಿಯಾಗಿ ವಾರ್ಮ್ ಅಪ್ ಮಾಡಿ. ಉತ್ತಮ ವರ್ಕೌಟ್ ಮೊದಲ ಐದು ನಿಮಿಷಗಳಿಂದ ಆರಂಭವಾಗುತ್ತದೆ." },
+    { "id": "mot-kn-w2", "lang": "kn", "category": "workout", "text": "ಇಂದು ಒಂದು ವ್ಯಾಯಾಮವನ್ನು ಸರಿಯಾದ ಭಂಗಿಯಲ್ಲಿ ಮಾಡಿ. ಅವಸರದ ರೆಪ್ಸ್‌ಗಿಂತ ಗುಣಮಟ್ಟದ ರೆಪ್ಸ್ ಉತ್ತಮ." },
+    { "id": "mot-kn-w3", "lang": "kn", "category": "workout", "text": "ಭಂಗಿ ಸರಿಯಾಗಿದ್ದರೆ ಇಂದು ಇನ್ನೊಂದು ಸೆಟ್ ಹೆಚ್ಚು ಮಾಡಲು ಪ್ರಯತ್ನಿಸಿ." },
+    { "id": "mot-kn-c1", "lang": "kn", "category": "consistency", "text": "ಸಣ್ಣ ಹೆಜ್ಜೆಗಳು ದೊಡ್ಡ ಬದಲಾವಣೆ ತರುತ್ತವೆ. ಇಂದು ಚಿಕ್ಕ ವರ್ಕೌಟ್ ಆದರೂ ನಿಮ್ಮ ದಿನಚರಿ ಮುಂದುವರಿಸಿ." },
+    { "id": "mot-kn-c2", "lang": "kn", "category": "consistency", "text": "ಪರಿಪೂರ್ಣ ದಿನ ಬೇಕಿಲ್ಲ, ಬಂದರೆ ಸಾಕು. ಜಿಮ್‌ನಲ್ಲಿ ಭೇಟಿಯಾಗೋಣ." },
+    { "id": "mot-kn-c3", "lang": "kn", "category": "consistency", "text": "ಅಭ್ಯಾಸಗಳು ಸಾಮಾನ್ಯ ದಿನಗಳಲ್ಲೇ ರೂಪುಗೊಳ್ಳುತ್ತವೆ. ಇಂದನ್ನು ಅರ್ಥಪೂರ್ಣವಾಗಿಸಿ." },
+    { "id": "mot-kn-r1", "lang": "kn", "category": "recovery", "text": "ವಿಶ್ರಾಂತಿಯೂ ತರಬೇತಿಯ ಭಾಗ. ಇಂದು ಸಾಕಷ್ಟು ನೀರು ಕುಡಿಯಿರಿ, ರಾತ್ರಿ ಚೆನ್ನಾಗಿ ನಿದ್ರಿಸಿ." },
+    { "id": "mot-kn-r2", "lang": "kn", "category": "recovery", "text": "ವರ್ಕೌಟ್ ನಂತರ ಕೆಲವು ನಿಮಿಷ ಸ್ಟ್ರೆಚ್ ಮಾಡಿ. ನಾಳೆ ನಿಮ್ಮ ದೇಹ ಧನ್ಯವಾದ ಹೇಳುತ್ತದೆ." },
+    { "id": "mot-kn-r3", "lang": "kn", "category": "recovery", "text": "ದಣಿವಾಗಿದೆಯೇ? ಲಘು ನಡಿಗೆ ಮತ್ತು ಒಳ್ಳೆಯ ಆಹಾರ ವಿಶ್ರಾಂತಿ ದಿನಕ್ಕೆ ಒಳ್ಳೆಯ ಯೋಜನೆ." }
+  ]
+}
