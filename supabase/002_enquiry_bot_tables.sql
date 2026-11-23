@@ -1,4 +1,4 @@
--- DRAFT, NOT APPLIED. New tables for the GOLD FITNESS KENGERI enquiry bot. Additive only; no existing table is changed.
+-- New tables for the GOLD FITNESS KENGERI enquiry bot. Additive only; no existing table is changed.
 -- Row Level Security is on with no policies, so only the service role (the Render service) can read or write them.
 
 create table if not exists public.wa_bot_inbound_events (
@@ -96,3 +96,14 @@ create index if not exists wa_bot_pack_sends_client_idx on public.wa_bot_pack_se
 create table if not exists public.wa_bot_pack_notices (notice_key text primary key, created_at timestamptz not null default now());
 alter table public.wa_bot_pack_sends enable row level security;
 alter table public.wa_bot_pack_notices enable row level security;
+
+-- Only the service role (the Render service) may touch these tables. Explicit revokes for the public API roles,
+-- on these 13 tables only. Nothing else in the database is changed.
+do $$
+declare t text;
+begin
+  foreach t in array array['wa_bot_inbound_events','wa_bot_sessions','wa_bot_photo_jobs','wa_bot_visit_requests','wa_bot_handoffs','wa_bot_staff_notifications','wa_bot_media_errors','wa_bot_missing_settings','wa_bot_status_events','wa_bot_timings','wa_bot_outbound_links','wa_bot_pack_sends','wa_bot_pack_notices']
+  loop
+    execute format('revoke all on table public.%I from anon, authenticated', t);
+  end loop;
+end $$;
