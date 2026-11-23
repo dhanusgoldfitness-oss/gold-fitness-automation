@@ -1,0 +1,13 @@
+{
+  "_note": "Fixed statutory dates only (same calendar date every year). Lunar and regional festivals (Ugadi, Ganesh Chaturthi, Dasara, Diwali, Eid, Makara Sankranti, etc.) are NOT seeded: their dates change every year and sources disagree. The owner enters each one with the year's verified date, then marks it verified. A government holiday never closes the gym by itself.",
+  "fixed": [
+    { "key": "republic-day", "month": 1, "day": 26, "type": "national", "greet": true, "name_en": "Republic Day", "name_kn": "ಗಣರಾಜ್ಯೋತ್ಸವ" },
+    { "key": "independence-day", "month": 8, "day": 15, "type": "national", "greet": true, "name_en": "Independence Day", "name_kn": "ಸ್ವಾತಂತ್ರ್ಯ ದಿನಾಚರಣೆ" },
+    { "key": "gandhi-jayanti", "month": 10, "day": 2, "type": "national", "greet": true, "name_en": "Gandhi Jayanti", "name_kn": "ಗಾಂಧಿ ಜಯಂತಿ" },
+    { "key": "karnataka-rajyotsava", "month": 11, "day": 1, "type": "festival", "greet": true, "name_en": "Karnataka Rajyotsava", "name_kn": "ಕನ್ನಡ ರಾಜ್ಯೋತ್ಸವ" },
+    { "key": "christmas", "month": 12, "day": 25, "type": "festival", "greet": true, "name_en": "Christmas", "name_kn": "ಕ್ರಿಸ್‌ಮಸ್" },
+    { "key": "ambedkar-jayanti", "month": 4, "day": 14, "type": "holiday", "greet": false, "name_en": "Dr. Ambedkar Jayanti", "name_kn": "ಅಂಬೇಡ್ಕರ್ ಜಯಂತಿ" },
+    { "key": "may-day", "month": 5, "day": 1, "type": "holiday", "greet": false, "name_en": "May Day", "name_kn": "ಕಾರ್ಮಿಕ ದಿನ" }
+  ],
+  "owner_to_enter_each_year": ["Makara Sankranti", "Ugadi", "Ram Navami", "Eid-ul-Fitr", "Basava Jayanti", "Bakrid", "Ganesh Chaturthi", "Gowri Habba", "Ayudha Puja", "Vijayadashami (Dasara)", "Deepavali"]
+}

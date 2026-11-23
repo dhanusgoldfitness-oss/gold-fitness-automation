@@ -9,6 +9,7 @@ import { runPhotoJob } from "./photos.js";
 import { t } from "./i18n.js";
 import { normalizeChat } from "./store.js";
 import { OwnerPack } from "./ownerpack.js";
+import { normalizeIndianMobile } from "./phone.js";
 
 export function verifySignature(rawBody, header, secret) {
   if (!secret || !header || !header.startsWith("sha256=")) return false;
@@ -33,8 +34,8 @@ export function extractEvents(body) {
 }
 
 export class Engine {
-  constructor({ store, bot, client, settings, timings, photoManifest, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = Date.now, photoPaceMs = 1500, photoCooldownMs = 30 * 60 * 1000, repliesAfterStop = false, ownerPack = null, botNumber = null, botPhoneNumberId = null, log = () => {} }) {
-    Object.assign(this, { store, bot, client, settings, timings, photoManifest, sleep, now, photoPaceMs, photoCooldownMs, repliesAfterStop, ownerPack, botNumber: botNumber ? String(botNumber).replace(/\D/g, "") : null, botPhoneNumberId, log });
+  constructor({ store, bot, client, settings, timings, photoManifest, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = Date.now, photoPaceMs = 1500, photoCooldownMs = 30 * 60 * 1000, repliesAfterStop = false, ownerPack = null, people = null, campaigns = null, sched = null, botNumber = null, botPhoneNumberId = null, log = () => {} }) {
+    Object.assign(this, { store, bot, client, settings, timings, photoManifest, sleep, now, photoPaceMs, photoCooldownMs, repliesAfterStop, ownerPack, people, campaigns, sched, botNumber: botNumber ? String(botNumber).replace(/\D/g, "") : null, botPhoneNumberId, log });
     this.locks = new Map();
   }
 
@@ -56,6 +57,7 @@ export class Engine {
       await this.store.recordStatus({ ...s, receivedAt });
       this.timings.status(s.id, s.status, receivedAt);
       if (this.ownerPack) this.ownerPack.onStatus(s).catch((e) => this.log("pack status notice failed", e.message)); // never delays the 200
+      if (this.campaigns) this.campaigns.onStatus(s).catch((e) => this.log("scheduled-message status update failed", e.message));
     }
     for (const m of messages) {
       // Only messages addressed to the WhatsApp API bot number are ours. Anything else is logged and ignored.
@@ -118,7 +120,17 @@ export class Engine {
       }
     }
 
+    if (this.sched) {
+      const cmd = this.sched.match(chat, msg);
+      if (cmd) {
+        const reply = await this.sched.run(cmd.text);
+        await this.send(chat, ev.wamid, { type: "text", body: reply });
+        return "sched_command";
+      }
+    }
+
     if (/^(stop|unsubscribe|stop all)$/.test(lower)) {
+      await this.stopEverywhere(chat, true);
       await this.store.setOptOut(chat, true);
       const ss = (await this.store.getSession(chat)) ?? this.bot.newSession();
       ss.stopped = true;
@@ -130,6 +142,7 @@ export class Engine {
       return "opt_out";
     }
     if (this.repliesAfterStop && lower === "start") {
+      await this.stopEverywhere(chat, false);
       await this.store.setOptOut(chat, false);
       const ss = (await this.store.getSession(chat)) ?? this.bot.newSession();
       ss.stopped = false;
@@ -140,6 +153,7 @@ export class Engine {
     }
     if (await this.store.isOptedOut(chat)) {
       if (lower === "start") {
+        await this.stopEverywhere(chat, false);
         await this.store.setOptOut(chat, false);
         const s = (await this.store.getSession(chat)) ?? this.bot.newSession();
         await this.send(chat, ev.wamid, { type: "text", body: t(s.lang, "startAck") });
@@ -159,14 +173,56 @@ export class Engine {
     }
 
     // First reply to the requested-details template (View Gym Details tap or any message): full pack once, then the menu.
-    if (this.ownerPack && session?.pendingPack && !session.stopped && (await this.ownerPack.deliverPending({ chat, wamid: ev.wamid, session }))) return "pack_on_first_reply";
+    if (this.ownerPack && session?.pendingPack && !session.stopped && (await this.ownerPack.deliverPending({ chat, wamid: ev.wamid, session }))) {
+      await this.captureAfterReply(chat, name);
+      return "pack_on_first_reply";
+    }
 
     const messages = await this.bot.handle({ chat, name, msg });
     for (const m of messages) {
       if (m.type === "photo_job") await this.runPhotos(chat, ev.wamid, m.packageKey, { force: Boolean(m.force) });
       else await this.send(chat, ev.wamid, m);
     }
+    await this.captureAfterReply(chat, name);
     return "processed";
+  }
+
+  /** STOP/START follow the phone number across leads and members. Failure is logged, never blocks the acknowledgement. */
+  async stopEverywhere(chat, stop) {
+    if (!this.people) return;
+    const phone = normalizeIndianMobile(chat);
+    if (!phone) return;
+    try {
+      if (stop) await this.people.stop(phone);
+      else await this.people.start(phone);
+    } catch (e) {
+      this.log(`${stop ? "STOP" : "START"} could not be saved to the preference store`, e.message);
+    }
+  }
+
+  /**
+   * Create or update the enquiry AFTER the reply has gone out, so a customer's first "Hi" still gets the menu immediately.
+   * Runs only when something new is known (first contact, a shared name, a package they looked at).
+   */
+  async captureAfterReply(chat, name) {
+    if (!this.people) return;
+    try {
+      const session = await this.store.getSession(chat);
+      if (!session) return;
+      const key = JSON.stringify([session.shareName || null, session.interest?.packageName || session.interest?.interest || null, session.lang]);
+      if (session.captureKey === key) return;
+      const phone = normalizeIndianMobile(chat);
+      if (!phone) return;
+      const r = await this.people.captureEnquiry({ phone, name: session.shareName || name || null, nameShared: Boolean(session.shareName), language: session.lang, interest: session.interest?.interest ?? null, packageName: session.interest?.packageName ?? null, source: "WhatsApp bot" });
+      if (r.ok) {
+        // Re-read: another handler may have saved the session while we were capturing.
+        const fresh = (await this.store.getSession(chat)) || session;
+        fresh.captureKey = key;
+        await this.store.saveSession(chat, fresh);
+      }
+    } catch (e) {
+      this.log("enquiry capture failed", e.message);
+    }
   }
 
   async followUp(job) {

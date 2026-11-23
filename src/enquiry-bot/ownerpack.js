@@ -9,20 +9,10 @@ import { renderPlan } from "./plans.js";
 import { locationReply } from "./location.js";
 import { t } from "./i18n.js";
 import { MetaError } from "./whatsapp.js";
+import { normalizeIndianMobile } from "./phone.js";
+export { normalizeIndianMobile };
 
 const digits = (s) => String(s || "").replace(/\D/g, "");
-
-/** "98450 12345", "+91 98450-12345", "09845012345", "919845012345" -> "919845012345". Anything else -> null. */
-export function normalizeIndianMobile(input) {
-  const raw = String(input ?? "").trim();
-  if (!/^[+\d\s().-]+$/.test(raw)) return null; // must be only a phone number: no other words
-  let d = digits(raw);
-  if (d.length === 13 && d.startsWith("091")) d = d.slice(1);
-  if (d.length === 12 && d.startsWith("91")) d = d.slice(2);
-  else if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
-  if (!/^[6-9]\d{9}$/.test(d)) return null;
-  return `91${d}`;
-}
 
 /** Owner message may be the number, optionally followed by "again" to force a resend inside the duplicate guard. */
 export function parseOwnerCommand(text) {
