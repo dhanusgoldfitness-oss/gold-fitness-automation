@@ -142,7 +142,7 @@ const status = (from, id) => ({ statuses: [{ id: 'wamid.out1', status: 'read', t
   // --- disabled engine: keyword bot answers WhatsApp exactly as before
   const db2 = legacyDb();
   const sent2 = [];
-  const app2 = createApp({ db: db2, send: async (...a) => sent2.push(a), waTemplate: async () => {}, notifyOwner: async () => {}, enquiryEngine: null, noDelay: true });
+  const app2 = createApp({ db: db2, send: async (...a) => sent2.push(a), sendList: async (to, menu) => sent2.push(['whatsapp', to, menu.body]), waTemplate: async () => {}, notifyOwner: async () => {}, enquiryEngine: null, noDelay: true });
   const s2 = app2.listen(0);
   try {
     const body = JSON.stringify(wa('919000000002', 'k1', text('hello')));
