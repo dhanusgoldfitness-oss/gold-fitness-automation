@@ -1,0 +1,24 @@
+{
+  "_note": "Customer-approved before-and-after images, in the order the owner supplied them (17 of the 37 files in the Cloudinary folder 'before and after'). Photos not listed here are never sent. Delivery URLs are built as JPEG (f_jpg) because WhatsApp accepts only JPEG/PNG images.",
+  "cloud_name": "dnnfzhrbd",
+  "folder": "before and after",
+  "images": [
+    { "public_id": "transformation-08_yhvmig", "version": 1783529618 },
+    { "public_id": "transformation-12_ne9fyx", "version": 1783529605 },
+    { "public_id": "transformation-13_oz9sjs", "version": 1783529600 },
+    { "public_id": "transformation-14_zynoqf", "version": 1783529610 },
+    { "public_id": "transformation-15_sdpsvd", "version": 1783529612 },
+    { "public_id": "transformation-16_k8hsmz", "version": 1783529624 },
+    { "public_id": "transformation-17_kplern", "version": 1783529641 },
+    { "public_id": "transformation-18_ovyzfv", "version": 1783529630 },
+    { "public_id": "transformation-19_opxt0v", "version": 1783529635 },
+    { "public_id": "transformation-20_voqfhq", "version": 1783529635 },
+    { "public_id": "transformation-22_akler2", "version": 1783529647 },
+    { "public_id": "transformation-29_yrfmdm", "version": 1783529652 },
+    { "public_id": "transformation-30_fmkcmo", "version": 1783529657 },
+    { "public_id": "transformation-33_bbqdvf", "version": 1783529666 },
+    { "public_id": "transformation-34_wmdrww", "version": 1783529660 },
+    { "public_id": "transformation-35_epgrfx", "version": 1783529672 },
+    { "public_id": "transformation-37_arlnsd", "version": 1783529675 }
+  ]
+}
